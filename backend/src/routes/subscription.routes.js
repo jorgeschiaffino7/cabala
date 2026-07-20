@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateUser } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
 import subscriptionService, { PAYMENT_PROVIDERS } from '../services/subscription.service.js';
 import { PaymentRouter } from '../services/payment/index.js';
 import { supabaseAdmin } from '../config/supabase.js';
@@ -43,7 +43,7 @@ router.get('/plans', async (req, res) => {
  * Obtiene la suscripción actual del usuario
  * Requiere autenticación
  */
-router.get('/current', authenticateUser, async (req, res) => {
+router.get('/current', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
     const plan = await subscriptionService.getUserPlan(userId);
@@ -116,7 +116,7 @@ router.get('/providers', async (req, res) => {
  * Crea una sesión de checkout con el proveedor apropiado
  * Requiere autenticación
  */
-router.post('/create-checkout', authenticateUser, async (req, res) => {
+router.post('/create-checkout', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
     const userEmail = req.user.email;
@@ -198,7 +198,7 @@ router.post('/create-checkout', authenticateUser, async (req, res) => {
  * Cancela la suscripción del usuario
  * Requiere autenticación
  */
-router.post('/cancel', authenticateUser, async (req, res) => {
+router.post('/cancel', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
     const { reason } = req.body;
@@ -261,7 +261,7 @@ router.post('/cancel', authenticateUser, async (req, res) => {
  * Pausa la suscripción del usuario (si el proveedor lo soporta)
  * Requiere autenticación
  */
-router.post('/pause', authenticateUser, async (req, res) => {
+router.post('/pause', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -320,7 +320,7 @@ router.post('/pause', authenticateUser, async (req, res) => {
  * Reactiva una suscripción pausada
  * Requiere autenticación
  */
-router.post('/resume', authenticateUser, async (req, res) => {
+router.post('/resume', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -379,7 +379,7 @@ router.post('/resume', authenticateUser, async (req, res) => {
  * Obtiene el historial de transacciones del usuario
  * Requiere autenticación
  */
-router.get('/transactions', authenticateUser, async (req, res) => {
+router.get('/transactions', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
     const limit = parseInt(req.query.limit) || 10;
