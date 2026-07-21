@@ -50,11 +50,12 @@ router.post(
         });
       }
 
-      // PASO 2: Buscar textos relacionados
+      // PASO 2: Buscar textos relacionados (por valor exacto y por contenido)
       const matchedTexts = await textSearchService.findByGematria(
         gematriaResult.value,
         {
-          limit: req.userPlan === 'Avanzado' ? 15 : 10
+          limit: req.userPlan === 'Avanzado' ? 15 : 10,
+          hebrewWord: gematriaResult.normalized
         }
       );
 
