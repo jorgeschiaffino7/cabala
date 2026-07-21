@@ -89,6 +89,20 @@ export const formatReference = (
 };
 
 /**
+ * Limpia markup HTML de textos bíblicos (formato Sefaria/MAM) para mostrar en UI.
+ */
+export const cleanHebrewDisplayText = (text: string): string => {
+  if (!text) return '';
+
+  const withoutTags = text.replace(/<[^>]*>/g, '');
+
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = withoutTags;
+
+  return textarea.value.replace(/\s+/g, ' ').trim();
+};
+
+/**
  * Parse Hebrew text (remove nikud)
  */
 export const normalizeHebrew = (text: string): string => {

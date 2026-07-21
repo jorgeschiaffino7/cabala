@@ -1,14 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import { Badge } from '@/components/common/Badge';
 import type { QueryResult } from '@/services/query.service';
-import { formatNumber } from '@/utils/formatters';
+import { cleanHebrewDisplayText, formatNumber } from '@/utils/formatters';
 
 interface QueryResultsProps {
   result: QueryResult;
 }
 
 const getMatchedHebrew = (text: { hebrew?: string; textHebrew?: string }) =>
-  text.hebrew || text.textHebrew || '';
+  cleanHebrewDisplayText(text.hebrew || text.textHebrew || '');
 
 export const QueryResults = ({ result }: QueryResultsProps) => {
   return (
