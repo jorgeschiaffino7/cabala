@@ -33,7 +33,14 @@ class SubscriptionService {
         return this.getDefaultFreePlan();
       }
 
-      return data || this.getDefaultFreePlan();
+      const plan = data || this.getDefaultFreePlan();
+
+      // Plan Avanzado = consultas ilimitadas (monthly_queries NULL en DB)
+      if (plan.plan_name === 'Avanzado') {
+        plan.monthly_queries = null;
+      }
+
+      return plan;
     } catch (error) {
       console.error('Error en getUserPlan:', error);
       return this.getDefaultFreePlan();

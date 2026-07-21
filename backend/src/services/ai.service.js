@@ -4,11 +4,14 @@ import { supabaseAdmin } from '../config/supabase.js';
 const SYSTEM_PROMPT = `Eres un asistente académico especializado en textos sagrados judíos y gematría.
 
 REGLAS ESTRICTAS:
-1. NUNCA inventes valores gemátricos
+1. NUNCA inventes valores gemátricos - usa SOLO los datos proporcionados
 2. NUNCA cites textos que no te fueron proporcionados
 3. NUNCA afirmes verdades absolutas o proféticas
 4. Si no hay textos relacionados, di "No se encontraron textos con este valor"
 5. Usa lenguaje académico pero accesible
+6. CRÍTICO: El desglose de letras ya fue calculado y verificado por el sistema. 
+   Si mencionas el desglose, CÍTALO EXACTAMENTE como aparece en los datos proporcionados.
+   NO recalcules ni reinterpretes los valores de las letras individuales.
 
 ESTRUCTURA DE RESPUESTA:
 1. Resumen breve del valor gemátrico
@@ -26,7 +29,7 @@ class AIService {
   /**
    * Genera interpretación con OpenAI.
    */
-  async interpret({ inputText, hebrewText, gematriaValue, matchedTexts, userPlan = 'Free' }) {
+  async interpret({ inputText, hebrewText, gematriaValue, breakdown, matchedTexts, userPlan = 'Free' }) {
     if (!openai) {
       throw new Error('OpenAI no está configurado. Falta OPENAI_API_KEY.');
     }
@@ -35,6 +38,7 @@ class AIService {
       inputText,
       hebrewText,
       gematriaValue,
+      breakdown,
       matchedTexts,
       userPlan,
     });
@@ -49,7 +53,7 @@ class AIService {
         { role: 'user', content: prompt },
       ],
       max_tokens: maxTokens,
-      temperature: 0.7,
+      temperature: 0.4,
       top_p: 0.9,
     });
 
@@ -70,7 +74,11 @@ class AIService {
   /**
    * Construye el prompt enviado a la IA.
    */
-  buildUserPrompt({ inputText, hebrewText, gematriaValue, matchedTexts = [] }) {
+  buildUserPrompt({ inputText, hebrewText, gematriaValue, breakdown = [], matchedTexts = [] }) {
+    const breakdownSection = breakdown.length
+      ? breakdown.map(b => `${b.letter} = ${b.value}`).join(', ')
+      : 'No disponible';
+
     const textsSection = matchedTexts.length
       ? matchedTexts
           .map((text, index) => {
@@ -81,7 +89,14 @@ class AIService {
 
     return `Frase consultada: "${inputText}"
 Texto hebreo: ${hebrewText}
-Valor gemátrico: ${gematriaValue}
+Valor gemátrico TOTAL: ${gematriaValue}
+
+DESGLOSE EXACTO POR LETRA (calculado y verificado por el sistema):
+${breakdownSection}
+
+IMPORTANTE: El desglose anterior ya fue calculado matemáticamente. 
+NO reinterpretes ni recalcules los valores de las letras.
+Si mencionas el desglose en tu respuesta, cítalo EXACTAMENTE como aparece arriba.
 
 TEXTOS RELACIONADOS CON ESTE VALOR:
 ${textsSection}

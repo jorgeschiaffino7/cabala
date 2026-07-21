@@ -65,6 +65,7 @@ router.post(
         inputText: text,
         hebrewText: gematriaResult.normalized,
         gematriaValue: gematriaResult.value,
+        breakdown: gematriaResult.breakdown,
         matchedTexts: formattedTexts,
         userPlan: req.userPlan
       });
@@ -101,6 +102,7 @@ router.post(
             inputText: text,
             hebrewText: gematriaResult.normalized,
             gematriaValue: gematriaResult.value,
+            breakdown: gematriaResult.breakdown,
             matchedTexts: formattedTexts,
             userPlan: req.userPlan
           }),
