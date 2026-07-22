@@ -11,11 +11,11 @@ import { subscriptionService, type SubscriptionPlan } from '@/services/subscript
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/context/SubscriptionContext';
 import { PLAN_NAMES, ROUTES, type PlanName } from '@/utils/constants';
-import { formatCurrency } from '@/utils/formatters';
+import { formatPriceForCountry } from '@/utils/formatters';
 
 export const PricingPage = () => {
   const { isAuthenticated } = useAuth();
-  const { currentSubscription } = useSubscription();
+  const { currentSubscription, userCountry } = useSubscription();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +65,7 @@ export const PricingPage = () => {
                   {plan.isPopular && <Badge variant="info">Popular</Badge>}
                 </div>
                 <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {plan.price === 0 ? 'Gratis' : formatCurrency(plan.priceCents)}
+                  {plan.price === 0 ? 'Gratis' : formatPriceForCountry(plan.name, plan.priceCents, userCountry)}
                   {plan.price > 0 && <span className="text-sm font-normal text-gray-500">/mes</span>}
                 </p>
               </CardHeader>

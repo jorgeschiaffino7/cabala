@@ -13,6 +13,40 @@ export const formatCurrency = (cents: number): string => {
 };
 
 /**
+ * Precios localizados por país (Mercado Pago países)
+ */
+const LOCAL_PRICES: Record<string, { currency: string; locale: string; prices: Record<string, number> }> = {
+  AR: {
+    currency: 'ARS',
+    locale: 'es-AR',
+    prices: { Estudio: 15000, Avanzado: 37500 }
+  }
+  // Agregar otros países de MP si es necesario (BR, CL, CO, MX, PE, UY)
+};
+
+/**
+ * Format price based on user country
+ */
+export const formatPriceForCountry = (
+  planName: string,
+  priceCentsUSD: number,
+  countryCode: string | null
+): string => {
+  const localConfig = countryCode ? LOCAL_PRICES[countryCode] : null;
+
+  if (localConfig && localConfig.prices[planName] !== undefined) {
+    return new Intl.NumberFormat(localConfig.locale, {
+      style: 'currency',
+      currency: localConfig.currency,
+      maximumFractionDigits: 0
+    }).format(localConfig.prices[planName]);
+  }
+
+  // Default: USD
+  return formatCurrency(priceCentsUSD);
+};
+
+/**
  * Format date to readable string
  */
 export const formatDate = (date: string | Date, formatString = 'PPP'): string => {

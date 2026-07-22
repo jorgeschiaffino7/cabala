@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "import": "node src/scripts/importCSV.js"
+    "import": "node src/scripts/importCSV.js",
+    "setup-plans": "node src/scripts/setupPaymentPlans.js"
   },
   "keywords": [],
   "author": "",
