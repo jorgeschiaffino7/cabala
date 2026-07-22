@@ -42,15 +42,10 @@ class MercadoPagoService extends PaymentGateway {
         throw new Error('El plan no tiene init_point configurado');
       }
 
-      // Agregar parámetros al init_point para tracking
-      const checkoutUrl = new URL(planData.init_point);
-      checkoutUrl.searchParams.set('external_reference', JSON.stringify({ userId, planId }));
-      if (email) {
-        checkoutUrl.searchParams.set('payer_email', email);
-      }
-
+      // Usar init_point tal cual - MP no acepta parámetros extra
+      // El tracking se hace vía webhook cuando el usuario complete
       return {
-        checkoutUrl: checkoutUrl.toString(),
+        checkoutUrl: planData.init_point,
         sessionId: providerPlanId,
         preapprovalId: providerPlanId
       };
