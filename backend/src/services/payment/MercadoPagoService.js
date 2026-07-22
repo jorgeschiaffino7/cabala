@@ -12,27 +12,40 @@ class MercadoPagoService extends PaymentGateway {
     super('mercadopago');
     this.preApproval = new PreApproval(mercadopagoConfig);
     this.preApprovalPlan = new PreApprovalPlan(mercadopagoConfig);
+    this.accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
   }
 
   /**
-   * Crea una sesión de checkout para suscripción
+   * Crea una sesión de checkout para suscripción usando API REST
    */
   async createCheckoutSession({ userId, planId, providerPlanId, email, successUrl, cancelUrl, payerInfo }) {
     try {
-      const response = await this.preApproval.create({
-        body: {
+      const response = await fetch('https://api.mercadopago.com/preapproval', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           preapproval_plan_id: providerPlanId,
           payer_email: email,
           external_reference: JSON.stringify({ userId, planId }),
           back_url: successUrl,
           status: 'pending'
-        }
+        })
       });
 
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('MercadoPago API error:', data);
+        throw new Error(data.message || 'Error en API de MercadoPago');
+      }
+
       return {
-        checkoutUrl: response.init_point,
-        sessionId: response.id,
-        preapprovalId: response.id
+        checkoutUrl: data.init_point,
+        sessionId: data.id,
+        preapprovalId: data.id
       };
     } catch (error) {
       console.error('Error creando checkout de MercadoPago:', error);

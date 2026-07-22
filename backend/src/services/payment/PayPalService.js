@@ -18,20 +18,20 @@ class PayPalService extends PaymentGateway {
    */
   async createCheckoutSession({ userId, planId, providerPlanId, email, successUrl, cancelUrl }) {
     try {
-      const response = await this.subscriptionsController.subscriptionsCreate({
+      const response = await this.subscriptionsController.createSubscription({
         body: {
-          plan_id: providerPlanId,
+          planId: providerPlanId,
           subscriber: {
-            email_address: email
+            emailAddress: email
           },
-          custom_id: JSON.stringify({ userId, planId }),
-          application_context: {
-            brand_name: 'Gematria Bot',
+          customId: JSON.stringify({ userId, planId }),
+          applicationContext: {
+            brandName: 'Gematria Bot',
             locale: 'es-ES',
-            shipping_preference: 'NO_SHIPPING',
-            user_action: 'SUBSCRIBE_NOW',
-            return_url: successUrl,
-            cancel_url: cancelUrl
+            shippingPreference: 'NO_SHIPPING',
+            userAction: 'SUBSCRIBE_NOW',
+            returnUrl: successUrl,
+            cancelUrl: cancelUrl
           }
         }
       });
@@ -55,9 +55,7 @@ class PayPalService extends PaymentGateway {
    */
   async getSubscription(subscriptionId) {
     try {
-      const response = await this.subscriptionsController.subscriptionsGet({
-        subscriptionId
-      });
+      const response = await this.subscriptionsController.getSubscription(subscriptionId);
 
       return this.normalizeSubscription(response.result);
     } catch (error) {
@@ -71,11 +69,9 @@ class PayPalService extends PaymentGateway {
    */
   async cancelSubscription(subscriptionId, reason = 'Cancelled by user') {
     try {
-      await this.subscriptionsController.subscriptionsCancel({
-        subscriptionId,
-        body: {
-          reason
-        }
+      await this.subscriptionsController.cancelSubscription({
+        id: subscriptionId,
+        body: { reason }
       });
 
       return { success: true };
@@ -90,11 +86,9 @@ class PayPalService extends PaymentGateway {
    */
   async pauseSubscription(subscriptionId, reason = 'Paused by user') {
     try {
-      await this.subscriptionsController.subscriptionsSuspend({
-        subscriptionId,
-        body: {
-          reason
-        }
+      await this.subscriptionsController.suspendSubscription({
+        id: subscriptionId,
+        body: { reason }
       });
 
       return { success: true };
@@ -109,11 +103,9 @@ class PayPalService extends PaymentGateway {
    */
   async resumeSubscription(subscriptionId, reason = 'Resumed by user') {
     try {
-      await this.subscriptionsController.subscriptionsActivate({
-        subscriptionId,
-        body: {
-          reason
-        }
+      await this.subscriptionsController.activateSubscription({
+        id: subscriptionId,
+        body: { reason }
       });
 
       return { success: true };
