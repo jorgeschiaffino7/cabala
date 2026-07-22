@@ -16,36 +16,43 @@ class MercadoPagoService extends PaymentGateway {
   }
 
   /**
-   * Crea una sesión de checkout para suscripción usando API REST
+   * Crea una sesión de checkout para suscripción
+   * Obtiene el init_point del plan y redirige al usuario
    */
   async createCheckoutSession({ userId, planId, providerPlanId, email, successUrl, cancelUrl, payerInfo }) {
     try {
-      const response = await fetch('https://api.mercadopago.com/preapproval', {
-        method: 'POST',
+      // Obtener el plan para conseguir el init_point
+      const planResponse = await fetch(`https://api.mercadopago.com/preapproval_plan/${providerPlanId}`, {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${this.accessToken}`,
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          preapproval_plan_id: providerPlanId,
-          payer_email: email,
-          external_reference: JSON.stringify({ userId, planId }),
-          back_url: successUrl,
-          status: 'pending'
-        })
+        }
       });
 
-      const data = await response.json();
+      const planData = await planResponse.json();
 
-      if (!response.ok) {
-        console.error('MercadoPago API error:', data);
-        throw new Error(data.message || 'Error en API de MercadoPago');
+      if (!planResponse.ok) {
+        console.error('MercadoPago get plan error:', planData);
+        throw new Error(planData.message || 'Error obteniendo plan de MercadoPago');
+      }
+
+      // El init_point del plan es la URL donde el usuario se suscribe
+      if (!planData.init_point) {
+        throw new Error('El plan no tiene init_point configurado');
+      }
+
+      // Agregar parámetros al init_point para tracking
+      const checkoutUrl = new URL(planData.init_point);
+      checkoutUrl.searchParams.set('external_reference', JSON.stringify({ userId, planId }));
+      if (email) {
+        checkoutUrl.searchParams.set('payer_email', email);
       }
 
       return {
-        checkoutUrl: data.init_point,
-        sessionId: data.id,
-        preapprovalId: data.id
+        checkoutUrl: checkoutUrl.toString(),
+        sessionId: providerPlanId,
+        preapprovalId: providerPlanId
       };
     } catch (error) {
       console.error('Error creando checkout de MercadoPago:', error);
