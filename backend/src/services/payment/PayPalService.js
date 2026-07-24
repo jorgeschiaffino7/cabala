@@ -1,16 +1,42 @@
-import { SubscriptionsController } from '@paypal/paypal-server-sdk';
 import crypto from 'crypto';
-import paypalClient, { PAYPAL_CONFIG } from '../../config/paypal.js';
+import { PAYPAL_CONFIG } from '../../config/paypal.js';
 import { PaymentGateway, WEBHOOK_EVENT_TYPES, SUBSCRIPTION_STATUS } from './PaymentGateway.js';
 
 /**
  * Servicio de pagos con PayPal
- * Implementa suscripciones usando Subscriptions API
+ * Implementa suscripciones usando REST API directa
  */
 class PayPalService extends PaymentGateway {
   constructor() {
     super('paypal');
-    this.subscriptionsController = new SubscriptionsController(paypalClient);
+  }
+
+  getApiBase() {
+    return process.env.PAYPAL_MODE === 'live'
+      ? 'https://api-m.paypal.com'
+      : 'https://api-m.sandbox.paypal.com';
+  }
+
+  async getAccessToken() {
+    const credentials = Buffer.from(
+      `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
+    ).toString('base64');
+
+    const response = await fetch(`${this.getApiBase()}/v1/oauth2/token`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${credentials}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: 'grant_type=client_credentials'
+    });
+
+    if (!response.ok) {
+      throw new Error('Error obteniendo token de PayPal');
+    }
+
+    const data = await response.json();
+    return data.access_token;
   }
 
   /**
@@ -18,25 +44,39 @@ class PayPalService extends PaymentGateway {
    */
   async createCheckoutSession({ userId, planId, providerPlanId, email, successUrl, cancelUrl }) {
     try {
-      const response = await this.subscriptionsController.createSubscription({
-        body: {
-          planId: providerPlanId,
+      const accessToken = await this.getAccessToken();
+
+      const response = await fetch(`${this.getApiBase()}/v1/billing/subscriptions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          plan_id: providerPlanId,
           subscriber: {
-            emailAddress: email
+            email_address: email
           },
-          customId: JSON.stringify({ userId, planId }),
-          applicationContext: {
-            brandName: 'Gematria Bot',
+          custom_id: JSON.stringify({ userId, planId }),
+          application_context: {
+            brand_name: 'Gematria Bot',
             locale: 'es-ES',
-            shippingPreference: 'NO_SHIPPING',
-            userAction: 'SUBSCRIBE_NOW',
-            returnUrl: successUrl,
-            cancelUrl: cancelUrl
+            shipping_preference: 'NO_SHIPPING',
+            user_action: 'SUBSCRIBE_NOW',
+            return_url: successUrl,
+            cancel_url: cancelUrl
           }
-        }
+        })
       });
 
-      const subscription = response.result;
+      const subscription = await response.json();
+
+      if (!response.ok) {
+        console.error('PayPal API error:', subscription);
+        throw new Error(subscription.message || 'Error en API de PayPal');
+      }
+
       const approveLink = subscription.links?.find(link => link.rel === 'approve');
 
       return {
@@ -55,9 +95,14 @@ class PayPalService extends PaymentGateway {
    */
   async getSubscription(subscriptionId) {
     try {
-      const response = await this.subscriptionsController.getSubscription(subscriptionId);
+      const accessToken = await this.getAccessToken();
 
-      return this.normalizeSubscription(response.result);
+      const response = await fetch(`${this.getApiBase()}/v1/billing/subscriptions/${subscriptionId}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+
+      const subscription = await response.json();
+      return this.normalizeSubscription(subscription);
     } catch (error) {
       console.error('Error obteniendo suscripción de PayPal:', error);
       throw new Error(`Error en PayPal: ${error.message}`);
@@ -69,9 +114,15 @@ class PayPalService extends PaymentGateway {
    */
   async cancelSubscription(subscriptionId, reason = 'Cancelled by user') {
     try {
-      await this.subscriptionsController.cancelSubscription({
-        id: subscriptionId,
-        body: { reason }
+      const accessToken = await this.getAccessToken();
+
+      await fetch(`${this.getApiBase()}/v1/billing/subscriptions/${subscriptionId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason })
       });
 
       return { success: true };
@@ -86,9 +137,15 @@ class PayPalService extends PaymentGateway {
    */
   async pauseSubscription(subscriptionId, reason = 'Paused by user') {
     try {
-      await this.subscriptionsController.suspendSubscription({
-        id: subscriptionId,
-        body: { reason }
+      const accessToken = await this.getAccessToken();
+
+      await fetch(`${this.getApiBase()}/v1/billing/subscriptions/${subscriptionId}/suspend`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason })
       });
 
       return { success: true };
@@ -103,9 +160,15 @@ class PayPalService extends PaymentGateway {
    */
   async resumeSubscription(subscriptionId, reason = 'Resumed by user') {
     try {
-      await this.subscriptionsController.activateSubscription({
-        id: subscriptionId,
-        body: { reason }
+      const accessToken = await this.getAccessToken();
+
+      await fetch(`${this.getApiBase()}/v1/billing/subscriptions/${subscriptionId}/activate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason })
       });
 
       return { success: true };
