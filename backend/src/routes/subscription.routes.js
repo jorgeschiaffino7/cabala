@@ -375,6 +375,91 @@ router.post('/resume', authenticate, async (req, res) => {
 });
 
 /**
+ * POST /api/subscriptions/downgrade
+ * Hace downgrade al plan Free (cancela la suscripción de pago)
+ * Requiere autenticación
+ */
+router.post('/downgrade', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { reason } = req.body;
+
+    const { data: subscription } = await supabaseAdmin
+      .from('subscriptions')
+      .select('payment_provider, provider_subscription_id, mercadopago_preapproval_id, paypal_subscription_id, plan_id')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .single();
+
+    if (!subscription) {
+      return res.status(404).json({
+        success: false,
+        error: 'No se encontró suscripción activa'
+      });
+    }
+
+    const provider = subscription.payment_provider;
+    let subscriptionId;
+
+    if (provider === PAYMENT_PROVIDERS.MERCADOPAGO) {
+      subscriptionId = subscription.mercadopago_preapproval_id || subscription.provider_subscription_id;
+    } else if (provider === PAYMENT_PROVIDERS.PAYPAL) {
+      subscriptionId = subscription.paypal_subscription_id || subscription.provider_subscription_id;
+    }
+
+    // Cancelar en el proveedor de pago
+    if (subscriptionId && provider !== PAYMENT_PROVIDERS.NONE) {
+      try {
+        await PaymentRouter.cancelSubscription(provider, subscriptionId, reason || 'Downgrade to Free');
+      } catch (cancelError) {
+        console.error('Error cancelando en proveedor:', cancelError);
+        // Continuar aunque falle la cancelación en el proveedor
+      }
+    }
+
+    // Obtener el plan Free
+    const freePlanId = await subscriptionService.getPlanIdByName('Free');
+
+    // Actualizar la suscripción a Free
+    await supabaseAdmin
+      .from('subscriptions')
+      .update({ 
+        status: 'canceled',
+        cancel_at_period_end: false,
+        canceled_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+
+    // Registrar la transacción
+    await subscriptionService.logTransaction({
+      userId,
+      paymentProvider: provider,
+      providerTransactionId: subscriptionId || 'manual',
+      transactionType: 'downgrade',
+      amountCents: 0,
+      currency: 'USD',
+      status: 'completed',
+      metadata: { 
+        reason: reason || 'Downgrade to Free', 
+        previousPlanId: subscription.plan_id,
+        newPlanId: freePlanId
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Plan cambiado a Free correctamente'
+    });
+  } catch (error) {
+    console.error('Error haciendo downgrade:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error al cambiar de plan'
+    });
+  }
+});
+
+/**
  * GET /api/subscriptions/transactions
  * Obtiene el historial de transacciones del usuario
  * Requiere autenticación

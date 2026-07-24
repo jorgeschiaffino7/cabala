@@ -213,6 +213,18 @@ class SubscriptionService {
   }
 
   /**
+   * Downgrade to Free plan
+   */
+  async downgradeToFree(reason?: string): Promise<void> {
+    try {
+      await apiClient.post(API_ENDPOINTS.DOWNGRADE, { reason });
+    } catch (error) {
+      console.error('Downgrade subscription error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get transaction history
    */
   async getTransactions(limit = 10): Promise<Transaction[]> {

@@ -46,6 +46,7 @@ export const API_ENDPOINTS = {
   CANCEL_SUBSCRIPTION: '/api/subscriptions/cancel',
   PAUSE_SUBSCRIPTION: '/api/subscriptions/pause',
   RESUME_SUBSCRIPTION: '/api/subscriptions/resume',
+  DOWNGRADE: '/api/subscriptions/downgrade',
   PROVIDERS: '/api/subscriptions/providers',
   TRANSACTIONS: '/api/subscriptions/transactions',
 } as const;
@@ -66,6 +67,7 @@ export const MERCADOPAGO_COUNTRIES = ['AR', 'BR', 'CL', 'CO', 'MX', 'PE', 'UY'] 
 export const SUBSCRIPTION_STATUS = {
   ACTIVE: 'active',
   CANCELED: 'canceled',
+  PAUSED: 'paused',
   PAST_DUE: 'past_due',
   TRIALING: 'trialing',
 } as const;

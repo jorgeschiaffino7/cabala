@@ -20,6 +20,7 @@ interface SubscriptionContextType {
   cancelSubscription: (reason?: string) => Promise<void>;
   pauseSubscription: () => Promise<void>;
   resumeSubscription: () => Promise<void>;
+  downgradeToFree: (reason?: string) => Promise<void>;
   getTransactions: (limit?: number) => Promise<Transaction[]>;
   detectCountry: () => Promise<string>;
 }
@@ -126,6 +127,16 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const downgradeToFree = async (reason?: string) => {
+    try {
+      await subscriptionService.downgradeToFree(reason);
+      await refreshSubscription();
+    } catch (error) {
+      console.error('Downgrade subscription error:', error);
+      throw error;
+    }
+  };
+
   const getTransactions = async (limit = 10): Promise<Transaction[]> => {
     try {
       return await subscriptionService.getTransactions(limit);
@@ -146,6 +157,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     cancelSubscription,
     pauseSubscription,
     resumeSubscription,
+    downgradeToFree,
     getTransactions,
     detectCountry,
   };
