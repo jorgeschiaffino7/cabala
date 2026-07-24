@@ -16,6 +16,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Railway/proxy: necesario para que rate-limit use la IP real (X-Forwarded-For)
+app.set('trust proxy', 1);
+
 // ============================================
 // MIDDLEWARES GLOBALES
 // ============================================
