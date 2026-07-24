@@ -51,16 +51,37 @@ async function handlePreapprovalEvent(preapprovalId) {
   try {
     const subscription = await MercadoPagoService.getSubscription(preapprovalId);
     
-    if (!subscription.userId) {
-      console.error('No se encontró userId en external_reference');
+    // Buscar userId: primero en external_reference, si no por email
+    let userId = subscription.userId;
+    
+    if (!userId && subscription.payerEmail) {
+      // Buscar usuario por email en la vista user_current_plan
+      const { data: userPlan } = await supabaseAdmin
+        .from('user_current_plan')
+        .select('user_id')
+        .eq('email', subscription.payerEmail)
+        .single();
+      
+      if (userPlan) {
+        userId = userPlan.user_id;
+        console.log(`👤 Usuario encontrado por email: ${subscription.payerEmail}`);
+      }
+    }
+
+    if (!userId) {
+      console.error('No se encontró usuario para email:', subscription.payerEmail);
       return;
     }
 
-    const planId = subscription.internalPlanId || 
-      await subscriptionService.getPlanIdByName('Estudio');
+    // Determinar plan por precio o usar default
+    let planId = subscription.internalPlanId;
+    if (!planId) {
+      const planName = subscription.planId?.includes('Avanzado') ? 'Avanzado' : 'Estudio';
+      planId = await subscriptionService.getPlanIdByName(planName);
+    }
 
     await subscriptionService.upsertSubscription({
-      userId: subscription.userId,
+      userId: userId,
       planId: planId,
       paymentProvider: PAYMENT_PROVIDERS.MERCADOPAGO,
       providerCustomerId: subscription.payerId,
@@ -73,7 +94,7 @@ async function handlePreapprovalEvent(preapprovalId) {
     });
 
     await subscriptionService.logTransaction({
-      userId: subscription.userId,
+      userId: userId,
       paymentProvider: PAYMENT_PROVIDERS.MERCADOPAGO,
       providerTransactionId: subscription.id,
       transactionType: getTransactionType(subscription.status),
@@ -83,7 +104,7 @@ async function handlePreapprovalEvent(preapprovalId) {
       providerResponse: subscription.raw
     });
 
-    console.log(`✅ Suscripción MP actualizada para usuario ${subscription.userId}`);
+    console.log(`✅ Suscripción MP actualizada para usuario ${userId}`);
   } catch (error) {
     console.error('Error procesando preapproval:', error);
     throw error;
