@@ -162,7 +162,7 @@ router.post('/create-checkout', authenticate, async (req, res) => {
     }
 
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const successUrl = `${baseUrl}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`;
+    const successUrl = `${baseUrl}/dashboard?payment=success`;
     const cancelUrl = `${baseUrl}/pricing?payment=cancelled`;
 
     const checkoutSession = await PaymentRouter.createCheckoutSession({
